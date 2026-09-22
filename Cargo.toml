@@ -1,0 +1,10 @@
+[package]
+name = "rust_start"
+version = "0.1.0"
+edition = "2024"
+
+[env]
+RUST_BACKTRACE = "full"
+
+[dependencies]
+smart-default = "0.7.1"
