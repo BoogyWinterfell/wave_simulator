@@ -1,7 +1,7 @@
 use wave_sim::core::wave::{WaveSource, WaveShape, PropagationMode};
 use wave_sim::core::processor::{SignalReceiver, SignalSample};
 use wave_sim::core::simulation::Simulation;
-use std::time::Instant;
+use web_time::Instant;
 use std::thread::sleep;
 use std::time::Duration;
 

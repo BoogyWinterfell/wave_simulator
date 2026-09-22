@@ -3299,7 +3299,11 @@ version = "0.1.0"
 dependencies = [
  "eframe",
  "egui_plot",
+ "log",
  "smart-default",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
 ]
 
 [[package]]

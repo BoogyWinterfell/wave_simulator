@@ -3,7 +3,7 @@ use egui_plot::{Line, Plot, PlotPoints, Points};
 use wave_sim::core::wave::{WaveSource, WaveShape, PropagationMode};
 use wave_sim::core::processor::PeakTracker;
 use wave_sim::core::simulation::Simulation;
-use std::time::Instant;
+use web_time::Instant;
 
 pub struct WaveApp {
     sim: Simulation,
@@ -93,9 +93,13 @@ impl eframe::App for WaveApp {
     }
 }
 
+// ==========================================
+// Native Entry Point (Desktop: Linux/Mac/Win)
+// ==========================================
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
+        viewport: eframe::egui::ViewportBuilder::default()
             .with_inner_size([900.0, 500.0])
             .with_title("Wave & Signal Simulator"),
         ..Default::default()
@@ -106,4 +110,42 @@ fn main() -> eframe::Result<()> {
         options,
         Box::new(|cc| Ok(Box::new(WaveApp::new(cc)))),
     )
+}
+
+// ==========================================
+// WebAssembly Entry Point (Browser / Trunk)
+// ==========================================
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    // Use eframe's re-exported JsCast trait
+    use eframe::wasm_bindgen::JsCast;
+
+    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+
+    let web_options = eframe::WebOptions::default();
+
+    wasm_bindgen_futures::spawn_local(async {
+        let document = web_sys::window()
+            .expect("No window found")
+            .document()
+            .expect("No document found");
+
+        let canvas = document
+            .get_element_by_id("wave_canvas")
+            .expect("Failed to find element with id 'wave_canvas'")
+            .dyn_into::<web_sys::HtmlCanvasElement>()
+            .expect("Element 'wave_canvas' is not an HtmlCanvasElement");
+
+        let start_result = eframe::WebRunner::new()
+            .start(
+                canvas,
+                web_options,
+                Box::new(|cc| Ok(Box::new(WaveApp::new(cc)))),
+            )
+            .await;
+
+        if let Err(e) = start_result {
+            log::error!("Failed to start eframe: {e:?}");
+        }
+    });
 }
