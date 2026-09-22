@@ -1,5 +1,5 @@
 use wave_sim::core::wave::{WaveSource, WaveShape, PropagationMode};
-use wave_sim::core::processor::{SignalReceiver, SignalSample, PeakTracker};
+use wave_sim::core::processor::{SignalReceiver, SignalSample};
 use wave_sim::core::simulation::Simulation;
 use std::time::Instant;
 use std::thread::sleep;
@@ -23,7 +23,6 @@ fn main() {
 
     let max_amp: f64 = sim.sources.iter().map(|s| s.amplitude).sum();
     sim.add_receiver(Box::new(TerminalVisualizer { max_amplitude: max_amp }));
-    sim.add_receiver(Box::new(PeakTracker::new()));
 
     let start_time = Instant::now();
     loop {
