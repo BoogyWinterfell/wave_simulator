@@ -2,7 +2,7 @@ name: Deploy WebAssembly to GitHub Pages
 
 on:
   push:
-    branches: [ main ] # or master
+    branches: [ main ]
 
 permissions:
   contents: read
@@ -29,9 +29,9 @@ jobs:
           targets: wasm32-unknown-unknown
 
       - name: Install Trunk
-        uses: jetli/trunk-action@v1
+        uses: taiki-e/install-action@v2
         with:
-          version: 'latest'
+          tool: trunk
 
       - name: Build WASM release
         run: trunk build --release
