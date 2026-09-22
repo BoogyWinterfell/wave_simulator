@@ -14,24 +14,38 @@ pub trait SignalReceiver {
     fn process(&mut self, sample: &SignalSample);
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct PeakInfo {
+    pub x: f64,
+    pub value: f64,
+}
+
 pub struct PeakTracker {
-    pub max_seen: f64,
-    pub peak_time: f64,
+    pub current_peak: PeakInfo,
+    pub max_peak: PeakInfo,
 }
 
 impl PeakTracker {
     pub fn new() -> Self {
-        Self { max_seen: f64::NEG_INFINITY, peak_time: 0.0 }
+        Self {
+            current_peak: PeakInfo { x: 0.0, value: f64::NEG_INFINITY },
+            max_peak: PeakInfo { x: 0.0, value: f64::NEG_INFINITY },
+        }
     }
-}
 
-impl SignalReceiver for PeakTracker {
-    fn process(&mut self, sample: &SignalSample) {
-        if sample.combined_amplitude > self.max_seen {
-            self.max_seen = sample.combined_amplitude;
-            self.peak_time = sample.time;
-            // In a GUI, you'd save this to draw a dot. 
-            // We won't print here to avoid ruining the terminal visualizer's formatting.
+    pub fn process_frame(&mut self, points: &[[f64; 2]]) {
+        let mut frame_best = PeakInfo { x: 0.0, value: f64::NEG_INFINITY };
+
+        for &[x, y] in points {
+            if y > frame_best.value {
+                frame_best = PeakInfo { x, value: y };
+            }
+        }
+
+        self.current_peak = frame_best;
+
+        if frame_best.value > self.max_peak.value {
+            self.max_peak = frame_best;
         }
     }
 }
