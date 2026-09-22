@@ -48,13 +48,15 @@ impl WaveSource {
 
         let normalized_value = match self.mode {
             PropagationMode::Traveling => {
-                let target = angular_freq * t + self.phase + x;
+                let spatial_offset = x - self.location;
+                let target = angular_freq * t + spatial_offset + self.phase;
                 self.shape.evaluate(target)
             },
+            
             PropagationMode::Standing => {
-                let space_target = self.location + self.phase;
-                let time_target = angular_freq * t;
-                self.shape.evaluate(space_target) * time_target.cos()
+            let space_target = (x - self.location) + self.phase;
+            let time_target = angular_freq * t;
+            self.shape.evaluate(space_target) * time_target.cos()
             }
         };
 

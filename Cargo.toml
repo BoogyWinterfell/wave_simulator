@@ -1,10 +1,9 @@
 [package]
-name = "rust_start"
+name = "wave_sim"
 version = "0.1.0"
 edition = "2024"
 
-[env]
-RUST_BACKTRACE = "full"
-
 [dependencies]
+eframe = "0.36.2"
+egui_plot = "0.37.0"
 smart-default = "0.7.1"
