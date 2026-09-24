@@ -1,17 +1,25 @@
 use crate::core::wave::WaveSource;
-use crate::core::processor::{SignalReceiver, SignalSample};
+use crate::core::processor::{PeakTracker};
 
 /// The main orchestrator that holds everything together
 pub struct Simulation {
     pub sources: Vec<WaveSource>,
-    pub receivers: Vec<Box<dyn SignalReceiver>>,
+    pub step_skip: usize,
+    pub step_counter: usize,
+    pub raw_peak_tracker: PeakTracker,
+    pub sampled_peak_tracker: PeakTracker,
+    pub sampled_points: Vec<[f64; 2]>,
 }
 
 impl Simulation {
     pub fn new() -> Self {
         Self {
             sources: Vec::new(),
-            receivers: Vec::new(),
+            step_skip: 24, // Initial default skip value set to 7
+            step_counter: 0,
+            raw_peak_tracker: PeakTracker::new(),
+            sampled_peak_tracker: PeakTracker::new(),
+            sampled_points: Vec::new(),
         }
     }
 
@@ -19,26 +27,31 @@ impl Simulation {
         self.sources.push(source);
     }
 
-    pub fn add_receiver(&mut self, receiver: Box<dyn SignalReceiver>) {
-        self.receivers.push(receiver);
+    pub fn generate_raw_points(&self, x_min: f64, x_max: f64, sample_count: usize, elapsed: f64) -> Vec<[f64; 2]> {
+        let step = (x_max - x_min) / (sample_count as f64);
+        let mut points = Vec::with_capacity(sample_count);
+
+        for i in 0..sample_count {
+            let x = x_min + (i as f64) * step;
+            let y: f64 = self.sources.iter().map(|s| s.wave(elapsed, x)).sum();
+            points.push([x, y]);
+        }
+
+        points
     }
 
-    /// Evaluates the wave at a specific time and passes it to all receivers
-    pub fn step(&mut self, elapsed_time: f64) {
-        // 1. Generate the combined signal
-        let combined_amplitude: f64 = self.sources.iter()
-            .map(|source| source.wave(elapsed_time, source.location))
-            .sum();
+    /// Advances simulation frame, updates peak tracking, and samples processor data based on step_skip
+    pub fn update(&mut self, raw_points: &[ [f64; 2] ]) {
+        // Track continuous physical signal in real time every frame
+        self.raw_peak_tracker.process_frame(raw_points);
 
-        // 2. Package it into our standard struct
-        let sample = SignalSample {
-            time: elapsed_time,
-            combined_amplitude,
-        };
-
-        // 3. Pass it to every receiver in the chain
-        for receiver in self.receivers.iter_mut() {
-            receiver.process(&sample);
+        // Process sampled signal only when skip threshold is met
+        if self.step_counter >= self.step_skip {
+            self.step_counter = 0;
+            self.sampled_peak_tracker.process_frame(raw_points);
+            self.sampled_points = raw_points.to_vec();
+        } else {
+            self.step_counter += 1;
         }
     }
 }
