@@ -1,4 +1,3 @@
-use std::f64::consts::PI;
 use eframe::egui::{self, Color32};
 use egui_plot::{Line, Plot, PlotPoints, Points};
 use wave_sim::core::wave::{WaveSource, WaveShape, PropagationMode};
@@ -8,6 +7,7 @@ use web_time::Instant;
 pub struct WaveApp {
     sim: Simulation,
     start_time: Instant,
+    last_frame_instant: Instant,
     x_min: f64,
     x_max: f64,
     max_amplitude: f64,
@@ -21,7 +21,7 @@ impl WaveApp {
         sim.add_source(WaveSource::new(5.0, 0.5, 50.0, 0.0, WaveShape::Sinc, PropagationMode::Standing));
 
         let max_amplitude: f64 = sim.sources.iter().map(|s| s.amplitude).sum();
-
+        
         let x_min = -10.0;
         let x_max = 10.0;
         let sample_count = 500;
@@ -33,10 +33,11 @@ impl WaveApp {
             let y: f64 = sim.sources.iter().map(|s| s.wave(0.0, x)).sum();
             initial_points.push([x, y]);
         }
-
+        let now =Instant::now();
         Self {
             sim,
-            start_time: Instant::now(),
+            start_time: now,
+            last_frame_instant: now,
             x_min,
             x_max,
             max_amplitude,
@@ -47,21 +48,27 @@ impl WaveApp {
 
 impl eframe::App for WaveApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
-        let elapsed = self.start_time.elapsed().as_secs_f64();
+        let now = Instant::now();
+        let dt_frame = now.duration_since(self.last_frame_instant).as_secs_f64();
+        self.last_frame_instant = now;
 
-        // 1. Advance simulation state & generate physical data
-        let raw_points = self.sim.generate_raw_points(self.x_min, self.x_max, self.sample_count, elapsed);
-        self.sim.update(&raw_points);
+        let total_elapsed = self.start_time.elapsed().as_secs_f64();
 
-        // 2. UI Controls & Headers
-        ui.heading("1D Wave Signal Simulator");
-        ui.label(format!("Elapsed: {:.2}s", elapsed));
+        // 1. Continuous physical view evaluated at real frame time
+        let raw_points = self.sim.generate_raw_points(self.x_min, self.x_max, self.sample_count, total_elapsed);
+        self.sim.raw_peak_tracker.process_frame(&raw_points);
+
+        // 2. Advance fixed-time sampling engine using dt_frame
+        self.sim.update(dt_frame, self.x_min, self.x_max, self.sample_count);
+
+        // UI sliders can now directly adjust physical time in seconds
         ui.horizontal(|ui| {
-            ui.label("Processing Step Skip:");
+            ui.label("Sample Interval:");
             ui.add(
-                egui::DragValue::new(&mut self.sim.step_skip)
-                    .range(0..=100)
-                    .suffix(" frames skipped")
+                egui::DragValue::new(&mut self.sim.sample_interval)
+                    .speed(0.005)
+                    .range(0.001..=2.0)
+                    .suffix(" s")
             );
         });
 

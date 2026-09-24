@@ -4,8 +4,9 @@ use crate::core::processor::{PeakTracker};
 /// The main orchestrator that holds everything together
 pub struct Simulation {
     pub sources: Vec<WaveSource>,
-    pub step_skip: usize,
-    pub step_counter: usize,
+    pub sim_time: f64,          // Internal simulation clock in seconds
+    pub sample_interval: f64,   // Fixed step size (e.g., 0.05s = 20 Hz sampling)
+    pub accumulator: f64,       // Unprocessed frame time pool
     pub raw_peak_tracker: PeakTracker,
     pub sampled_peak_tracker: PeakTracker,
     pub sampled_points: Vec<[f64; 2]>,
@@ -15,8 +16,9 @@ impl Simulation {
     pub fn new() -> Self {
         Self {
             sources: Vec::new(),
-            step_skip: 24, // Initial default skip value set to 7
-            step_counter: 0,
+            sim_time: 0.0,
+            sample_interval: 1.0, // Sample every 85 ms
+            accumulator: 0.0,
             raw_peak_tracker: PeakTracker::new(),
             sampled_peak_tracker: PeakTracker::new(),
             sampled_points: Vec::new(),
@@ -41,17 +43,23 @@ impl Simulation {
     }
 
     /// Advances simulation frame, updates peak tracking, and samples processor data based on step_skip
-    pub fn update(&mut self, raw_points: &[ [f64; 2] ]) {
-        // Track continuous physical signal in real time every frame
-        self.raw_peak_tracker.process_frame(raw_points);
+pub fn update(&mut self, dt_frame: f64, x_min: f64, x_max: f64, spatial_samples: usize) {
+        // 1. Add elapsed real-world frame time to pool
+        self.accumulator += dt_frame;
 
-        // Process sampled signal only when skip threshold is met
-        if self.step_counter >= self.step_skip {
-            self.step_counter = 0;
-            self.sampled_peak_tracker.process_frame(raw_points);
-            self.sampled_points = raw_points.to_vec();
-        } else {
-            self.step_counter += 1;
+        // 2. Consume accumulator in fixed delta-t ticks
+        while self.accumulator >= self.sample_interval {
+            self.sim_time += self.sample_interval;
+
+            // Generate spatial slice at the exact internal time tick
+            let sampled_frame = self.generate_raw_points(x_min, x_max, spatial_samples, self.sim_time);
+
+            // Feed slice to the receiver processor chain
+            self.sampled_peak_tracker.process_frame(&sampled_frame);
+            self.sampled_points = sampled_frame;
+
+            // Subtract fixed interval from pool
+            self.accumulator -= self.sample_interval;
         }
     }
 }
