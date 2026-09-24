@@ -19,6 +19,7 @@ impl WaveApp {
         let mut sim = Simulation::new();
         sim.add_source(WaveSource::new(0.0, 2.5, 10.0, 0.0, WaveShape::Sine, PropagationMode::Traveling));
         sim.add_source(WaveSource::new(5.0, 0.5, 50.0, 0.0, WaveShape::Sinc, PropagationMode::Standing));
+        sim.add_source(WaveSource::new(120.0, 1.0, 100.0, 0.0, WaveShape::GaussianPulse {width: 1.5}, PropagationMode::Traveling));
 
         let max_amplitude: f64 = sim.sources.iter().map(|s| s.amplitude).sum();
         

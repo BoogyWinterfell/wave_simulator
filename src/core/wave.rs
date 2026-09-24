@@ -2,13 +2,15 @@
 // MODULE: core/wave.rs
 // Responsibility: Mathematical wave definitions and propagation
 // =====================================================================
-use std::f64::consts::PI;
+use std::f64::consts::{PI};
 
 #[derive(Clone, Copy)]
 pub enum WaveShape {
     Sine,
     Square,
     Sinc,
+    GaussianPulse { width: f64 },
+    WavePacket { width: f64 },
 }
 
 impl WaveShape {
@@ -18,7 +20,16 @@ impl WaveShape {
             WaveShape::Square => if target.sin() >= 0.0 { 1.0 } else { -1.0 },
             WaveShape::Sinc => {
                 if target.abs() < 1e-6 { 1.0 } else { target.sin() / target }
-            }
+            },
+            WaveShape::GaussianPulse { width } => {
+                let normalized = target / width;
+                (-0.5 * normalized * normalized).exp()
+            },
+            WaveShape::WavePacket { width } => {
+                let normalized = target / width;
+                let envelope = (-0.5 * normalized * normalized).exp();
+                envelope * target.sin()
+            },
         }
     }
 }

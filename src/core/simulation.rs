@@ -17,7 +17,7 @@ impl Simulation {
         Self {
             sources: Vec::new(),
             sim_time: 0.0,
-            sample_interval: 1.0, // Sample every 85 ms
+            sample_interval: 1.0,
             accumulator: 0.0,
             raw_peak_tracker: PeakTracker::new(),
             sampled_peak_tracker: PeakTracker::new(),
